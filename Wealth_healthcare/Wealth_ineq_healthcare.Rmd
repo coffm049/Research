@@ -1,0 +1,56 @@
+---
+title: "Wealth and Health"
+author: "Christian Coffman"
+date: "10/1/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(tidyr)
+
+mydata <- read.csv2('/home/christian/Downloads/dfa-networth-levels.csv', header = TRUE, sep = ",") %>%
+  select(Date, Net.worth, Category)
+
+```
+
+```{r}
+ggplot(mydata, aes(x=Date, y = Net.worth, col = Category)) +
+  geom_point()
+```
+
+
+Transform back to the average wealth per person in each category. (Actually it's normalzied per percent popoulation, but it's same thing different scale)
+```{r}
+wid <- mydata %>% 
+  spread(Category, Net.worth)
+
+wid <- wid %>%
+  mutate(Ave_bot50 = Bottom50 / 50, Ave_Next40 = Next40/40, Ave_Next9 = Next9/9, Ave_top1 = Top1) %>%
+  mutate(b50p = Ave_bot50/Ave_top1, n40p= Ave_Next40/Ave_top1, n9r= Ave_Next9/Ave_top1) %>%
+  mutate(rate50 = 1/(1 + exp(-b50p))  , rate40= 1/(1 + exp(-n40p)), rate9= n9r)
+
+  
+  
+wid %>% 
+  gather(Category, Ave_worth, Ave_bot50:Ave_top1) %>%
+  ggplot(aes(x=Date, y=Ave_worth, col = Category)) +
+  geom_point() # + scale_y_log10()
+  
+wid %>% 
+  gather(Category, Rates, rate50:rate9) %>%
+  ggplot(aes(x=Date, y=Rates, col = Category)) +
+  geom_point() +
+  ggtitle("Rate of having difficulties with medical bills")
+```
+
+Assume Proportion of visits scales with $$ P=1-\frac{1}{1+e^{-(a+bx)}}) $$ where P is the proportion, a is some constant lets say 0 for now, and b is some constant proportion, so lets say 0.5... Let's see what happens to the transformed data. Let x represent the percentile in social system.
+```{r} 
+wid %>%
+  gather(Category, Propor, b50p:n9r) %>%
+  ggplot(aes(x=Date, y=Propor, col = Category)) +
+  geom_point()
+p <- 1/(1 + exp(-x))
+plot(x, p)
+```
